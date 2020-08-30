@@ -8,19 +8,27 @@ import time
 class Circle():
 
     def __init__(self, position, radius):
-        self.position = position
-        self.radius = radius
-        self.velocity = [0, 0]
-        self.glued = False
+        """
+        Creates a circle object at the given position 
+        and with the given radius
+        """
+        self.position = position # The position of the circle
+        self.radius = radius # The radius of the circle
+        self.velocity = [0, 0] # The velocity of the circle, in pixels per iteration
+        self.glued = False # A glued circle does not move; circles glue when they collide
 
     def distance(self, other):
+        """
+        Returns the Euclidean distance between this circle and another
+        """
         return math.hypot(self.position[0] - other.position[0], self.position[0] - other.position[0])
     
 
-def gravitate(circles, g_constant=0.1):
+def gravitate_glue(circles, g_constant=0.1):
     """
     Applies gravitation to all circles, from all circles
     Works according to an inverse square law
+    Colliding circles become glued, meaning they stop moving
     """
     for i in range(len(circles)):
         if g_constant < 0 or not circles[i].glued:
@@ -42,6 +50,14 @@ def gravitate(circles, g_constant=0.1):
         
 
 def distribute_circles(number, radius_min, radius_max, x_bound, y_bound):
+    """
+    Distributes circles evenly and possibly randomly according to bounding boxes
+    A rectangular region with the origin as a vertex is divided into boxes 
+     twice as wide as the maximal radius for generating circles
+    This is to ensure that no circles can intersect
+    Furthermore, the boxes are spaced apart by an addition twice the maximal radius,
+    so there are some empty boxes in the region
+    """
     bound_boxes = []
     for i in range(x_bound / radius_max / 2):
         for j in range(y_bound / radius_max / 2):
@@ -56,14 +72,18 @@ def distribute_circles(number, radius_min, radius_max, x_bound, y_bound):
     return circles
 
 def place_boundary_circle(circles, x_bound, y_bound, x_margin, y_margin, min_radius, max_radius):
-    if random.random() > 0.5:
+    """
+    Places a circle within some margin length of the boundaries to a rectangular domain
+    Mostly aims to avoid placing circles in the middle of the domain
+    """
+    if random.random() > 0.5: # place circle in top or bottom
         circles.append(Circle(
             [
                 random.randint(0, x_bound),
                 random.choice([random.randint(0, y_margin), random.randint(y_bound - y_margin, y_bound)])
             ], random.randint(min_radius, max_radius)
         ))
-    else:
+    else: # place circle in left or right
         circles.append(Circle(
             [
                 random.choice([random.randint(0, x_margin), random.randint(x_bound - x_margin, x_bound)]),
@@ -72,6 +92,11 @@ def place_boundary_circle(circles, x_bound, y_bound, x_margin, y_margin, min_rad
         ))
 
 def create_center_star(x_bound, y_bound, center_radius, outer_radius, sides):
+    """
+    Creates a 'star' in the center of the rectangular domain
+    Does so by placing a center, then evenly spacing `sides` others 
+     around it
+    """
     circles = [Circle([x_bound / 2, y_bound / 2], center_radius)]
     for i in range(sides):
         circles.append(Circle([x_bound / 2 + math.sin(i * 2 * math.pi / sides) * (center_radius + outer_radius), 
@@ -82,6 +107,8 @@ def create_center_star(x_bound, y_bound, center_radius, outer_radius, sides):
 def break_circles(circles, break_constant, time_skip=10):
     """
     Unglues circles and breaks them apart forcefully
+    Applies inverse-square repulsion to all circles, and skips forward in time
+     to avoid instant re-collision between circles
     """
     for i in range(len(circles)):
         if circles[i].glued:
@@ -101,6 +128,10 @@ def break_circles(circles, break_constant, time_skip=10):
         c.position[1] += time_skip * c.velocity[1]
 
 def unglue(circles):
+    """
+    Sets `glued` to false for all circles
+    Also resets their velocity
+    """
     for c in circles:
         if c.glued:
             c.glued = False
@@ -108,6 +139,11 @@ def unglue(circles):
 
 
 def main():
+    """
+    Main running function,
+    Currently we create a center star of 5 sides,
+     and create a boundary circle every 100 ticks
+    """
 
     pygame.init()
 
